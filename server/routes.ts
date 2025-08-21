@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { translateRequestSchema } from "@shared/schema";
 import { translateCode } from "./services/openai";
+import { systemMonitor } from "./services/system-monitor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Translate code endpoint
@@ -34,7 +35,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         translation,
-        explanation: translationResult.explanation
+        explanation: translationResult.explanation,
+        complexityAnalysis: translationResult.complexityAnalysis
       });
     } catch (error) {
       console.error("Translation error:", error);
@@ -67,6 +69,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching translation:", error);
       res.status(500).json({ message: "Failed to fetch translation" });
+    }
+  });
+
+  // System metrics endpoint
+  app.get("/api/system/metrics", async (req, res) => {
+    try {
+      const metrics = await systemMonitor.getSystemMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching system metrics:", error);
+      res.status(500).json({ message: "Failed to fetch system metrics" });
     }
   });
 

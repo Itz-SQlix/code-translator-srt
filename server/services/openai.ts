@@ -11,6 +11,11 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 export interface CodeTranslationResult {
   translatedCode: string;
   explanation?: string;
+  complexityAnalysis?: {
+    timeComplexity: string;
+    spaceComplexity: string;
+    description: string;
+  };
 }
 
 export async function translateCode(
@@ -42,14 +47,19 @@ ${sourceCode}
 Please respond with a JSON object containing:
 - "translatedCode": the translated code as a string
 - "explanation": a brief explanation of any significant changes or adaptations made during translation
+- "complexityAnalysis": an object with:
+  - "timeComplexity": the Big O time complexity (e.g., "O(n)", "O(log n)", "O(n²)")
+  - "spaceComplexity": the Big O space complexity (e.g., "O(1)", "O(n)")
+  - "description": a brief explanation of the algorithm's complexity and performance characteristics
 
 Ensure the translated code is complete, functional, and follows ${targetLang} best practices.`;
 
   try {
-    const systemPrompt = `You are an expert code translator. 
+    const systemPrompt = `You are an expert code translator and algorithm analyst. 
 Analyze the code and translate it accurately while maintaining functionality.
+Also provide complexity analysis for the algorithm.
 Respond with JSON in this format: 
-{'translatedCode': 'the translated code as a string', 'explanation': 'brief explanation of changes'}`;
+{'translatedCode': 'the translated code as a string', 'explanation': 'brief explanation of changes', 'complexityAnalysis': {'timeComplexity': 'Big O notation', 'spaceComplexity': 'Big O notation', 'description': 'explanation of complexity'}}`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-pro",
@@ -61,8 +71,17 @@ Respond with JSON in this format:
           properties: {
             translatedCode: { type: "string" },
             explanation: { type: "string" },
+            complexityAnalysis: {
+              type: "object",
+              properties: {
+                timeComplexity: { type: "string" },
+                spaceComplexity: { type: "string" },
+                description: { type: "string" },
+              },
+              required: ["timeComplexity", "spaceComplexity", "description"],
+            },
           },
-          required: ["translatedCode", "explanation"],
+          required: ["translatedCode", "explanation", "complexityAnalysis"],
         },
       },
       contents: prompt,

@@ -8,6 +8,7 @@ import LanguageSelector from "@/components/language-selector";
 import CodeEditor from "@/components/code-editor";
 import FeatureCards from "@/components/feature-cards";
 import RecentTranslations from "@/components/recent-translations";
+import PerformanceMetrics from "@/components/performance-metrics";
 import AppFooter from "@/components/app-footer";
 import { Button } from "@/components/ui/button";
 import { Loader2, Languages, Trash2, Save, Share } from "lucide-react";
@@ -18,6 +19,11 @@ export default function Home() {
   const [targetLanguage, setTargetLanguage] = useState<SupportedLanguage>("python");
   const [sourceCode, setSourceCode] = useState("");
   const [translatedCode, setTranslatedCode] = useState("");
+  const [complexityAnalysis, setComplexityAnalysis] = useState<{
+    timeComplexity: string;
+    spaceComplexity: string;
+    description: string;
+  } | undefined>();
   const { toast } = useToast();
 
   const { data: recentTranslations } = useQuery({
@@ -29,6 +35,7 @@ export default function Home() {
     mutationFn: (request: TranslateRequest) => translateCode(request),
     onSuccess: (data) => {
       setTranslatedCode(data.translation.translatedCode);
+      setComplexityAnalysis(data.complexityAnalysis);
       toast({
         title: "Translation Complete",
         description: "Your code has been successfully translated!",
@@ -78,12 +85,14 @@ export default function Home() {
     if (translatedCode) {
       setSourceCode(translatedCode);
       setTranslatedCode("");
+      setComplexityAnalysis(undefined);
     }
   };
 
   const handleClear = () => {
     setSourceCode("");
     setTranslatedCode("");
+    setComplexityAnalysis(undefined);
   };
 
   return (
@@ -171,6 +180,11 @@ export default function Home() {
           </div>
         </div>
 
+        <PerformanceMetrics 
+          complexityAnalysis={complexityAnalysis}
+          isVisible={!!translatedCode || !!complexityAnalysis}
+        />
+        
         <FeatureCards />
         <RecentTranslations translations={recentTranslations as any || []} />
       </main>

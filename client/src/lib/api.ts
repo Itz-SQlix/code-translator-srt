@@ -12,6 +12,11 @@ export interface TranslationResponse {
     createdAt?: Date;
   };
   explanation?: string;
+  complexityAnalysis?: {
+    timeComplexity: string;
+    spaceComplexity: string;
+    description: string;
+  };
 }
 
 export async function translateCode(request: TranslateRequest): Promise<TranslationResponse> {
