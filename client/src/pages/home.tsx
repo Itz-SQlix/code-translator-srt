@@ -9,6 +9,8 @@ import CodeEditor from "@/components/code-editor";
 import FeatureCards from "@/components/feature-cards";
 import RecentTranslations from "@/components/recent-translations";
 import PerformanceMetrics from "@/components/performance-metrics";
+import CPUUsageChart from "@/components/cpu-usage-chart";
+import ComplexityVisualization from "@/components/complexity-visualization";
 import AppFooter from "@/components/app-footer";
 import { Button } from "@/components/ui/button";
 import { Loader2, Languages, Trash2, Save, Share } from "lucide-react";
@@ -99,16 +101,25 @@ export default function Home() {
     <div className="min-h-screen bg-dark-950 text-dark-100">
       <AppHeader />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <LanguageSelector
+      <div className="flex">
+        {/* Left Sidebar - CPU Usage Chart */}
+        <div className="hidden lg:block w-64 p-4">
+          <div className="sticky top-20">
+            <CPUUsageChart />
+          </div>
+        </div>
+        
+        {/* Main Content */}
+        <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <LanguageSelector
           sourceLanguage={sourceLanguage}
           targetLanguage={targetLanguage}
           onSourceLanguageChange={setSourceLanguage}
           onTargetLanguageChange={setTargetLanguage}
           onSwapLanguages={handleSwapLanguages}
-        />
+          />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <CodeEditor
             language={sourceLanguage}
             value={sourceCode}
@@ -127,9 +138,9 @@ export default function Home() {
             isLoading={translateMutation.isPending}
             data-testid="translated-code-editor"
           />
-        </div>
+          </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
           <Button
             onClick={handleTranslate}
             disabled={translateMutation.isPending || !sourceCode.trim()}
@@ -178,16 +189,24 @@ export default function Home() {
               <Share className="h-5 w-5" />
             </Button>
           </div>
-        </div>
+          </div>
 
-        <PerformanceMetrics 
-          complexityAnalysis={complexityAnalysis}
-          isVisible={!!translatedCode || !!complexityAnalysis}
-        />
+          <PerformanceMetrics 
+            complexityAnalysis={complexityAnalysis}
+            isVisible={!!translatedCode || !!complexityAnalysis}
+          />
+          
+          <FeatureCards />
+          <RecentTranslations translations={recentTranslations as any || []} />
+        </main>
         
-        <FeatureCards />
-        <RecentTranslations translations={recentTranslations as any || []} />
-      </main>
+        {/* Right Sidebar - Complexity Visualization */}
+        <div className="hidden lg:block w-64 p-4">
+          <div className="sticky top-20">
+            <ComplexityVisualization complexityAnalysis={complexityAnalysis} />
+          </div>
+        </div>
+      </div>
 
       <AppFooter />
     </div>
