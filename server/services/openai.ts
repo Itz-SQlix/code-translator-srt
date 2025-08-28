@@ -16,6 +16,12 @@ export interface CodeTranslationResult {
     spaceComplexity: string;
     description: string;
   };
+  performanceComparison?: {
+    originalComplexity: string;
+    translatedComplexity: string;
+    theoreticalWinner: 'original' | 'translated' | 'equal';
+    comparisonReason: string;
+  };
 }
 
 export async function translateCode(
@@ -48,18 +54,23 @@ Please respond with a JSON object containing:
 - "translatedCode": the translated code as a string
 - "explanation": a brief explanation of any significant changes or adaptations made during translation
 - "complexityAnalysis": an object with:
-  - "timeComplexity": the Big O time complexity (e.g., "O(n)", "O(log n)", "O(n²)")
-  - "spaceComplexity": the Big O space complexity (e.g., "O(1)", "O(n)")
-  - "description": a brief explanation of the algorithm's complexity and performance characteristics
+  - "timeComplexity": the Big O time complexity of the TRANSLATED code (e.g., "O(n)", "O(log n)", "O(n²)")
+  - "spaceComplexity": the Big O space complexity of the TRANSLATED code (e.g., "O(1)", "O(n)")
+  - "description": a brief explanation of the translated algorithm's complexity and performance characteristics
+- "performanceComparison": an object with:
+  - "originalComplexity": the Big O time complexity of the ORIGINAL source code
+  - "translatedComplexity": the Big O time complexity of the TRANSLATED code
+  - "theoreticalWinner": either "original", "translated", or "equal" based on which has better theoretical performance
+  - "comparisonReason": explanation of why one is theoretically better or if they're equal
 
 Ensure the translated code is complete, functional, and follows ${targetLang} best practices.`;
 
   try {
     const systemPrompt = `You are an expert code translator and algorithm analyst. 
 Analyze the code and translate it accurately while maintaining functionality.
-Also provide complexity analysis for the algorithm.
+Provide complexity analysis for both the original and translated algorithms and compare their theoretical performance.
 Respond with JSON in this format: 
-{'translatedCode': 'the translated code as a string', 'explanation': 'brief explanation of changes', 'complexityAnalysis': {'timeComplexity': 'Big O notation', 'spaceComplexity': 'Big O notation', 'description': 'explanation of complexity'}}`;
+{'translatedCode': 'the translated code as a string', 'explanation': 'brief explanation of changes', 'complexityAnalysis': {'timeComplexity': 'Big O notation for translated code', 'spaceComplexity': 'Big O notation for translated code', 'description': 'explanation of translated code complexity'}, 'performanceComparison': {'originalComplexity': 'Big O of original', 'translatedComplexity': 'Big O of translated', 'theoreticalWinner': 'original/translated/equal', 'comparisonReason': 'explanation of performance comparison'}}`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-pro",
@@ -80,8 +91,18 @@ Respond with JSON in this format:
               },
               required: ["timeComplexity", "spaceComplexity", "description"],
             },
+            performanceComparison: {
+              type: "object",
+              properties: {
+                originalComplexity: { type: "string" },
+                translatedComplexity: { type: "string" },
+                theoreticalWinner: { type: "string", enum: ["original", "translated", "equal"] },
+                comparisonReason: { type: "string" },
+              },
+              required: ["originalComplexity", "translatedComplexity", "theoreticalWinner", "comparisonReason"],
+            },
           },
-          required: ["translatedCode", "explanation", "complexityAnalysis"],
+          required: ["translatedCode", "explanation", "complexityAnalysis", "performanceComparison"],
         },
       },
       contents: prompt,

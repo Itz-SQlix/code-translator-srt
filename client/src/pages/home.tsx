@@ -11,6 +11,7 @@ import RecentTranslations from "@/components/recent-translations";
 import PerformanceMetrics from "@/components/performance-metrics";
 import CPUUsageChart from "@/components/cpu-usage-chart";
 import ComplexityVisualization from "@/components/complexity-visualization";
+import PerformanceComparison from "@/components/performance-comparison";
 import AppFooter from "@/components/app-footer";
 import { Button } from "@/components/ui/button";
 import { Loader2, Languages, Trash2, Save, Share } from "lucide-react";
@@ -26,6 +27,12 @@ export default function Home() {
     spaceComplexity: string;
     description: string;
   } | undefined>();
+  const [performanceComparison, setPerformanceComparison] = useState<{
+    originalComplexity: string;
+    translatedComplexity: string;
+    theoreticalWinner: 'original' | 'translated' | 'equal';
+    comparisonReason: string;
+  } | undefined>();
   const { toast } = useToast();
 
   const { data: recentTranslations } = useQuery({
@@ -38,9 +45,10 @@ export default function Home() {
     onSuccess: (data) => {
       setTranslatedCode(data.translation.translatedCode);
       setComplexityAnalysis(data.complexityAnalysis);
+      setPerformanceComparison(data.performanceComparison);
       toast({
         title: "Translation Complete",
-        description: "Your code has been successfully translated!",
+        description: "Your code has been successfully translated with performance analysis!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/translations/recent"] });
     },
@@ -88,6 +96,7 @@ export default function Home() {
       setSourceCode(translatedCode);
       setTranslatedCode("");
       setComplexityAnalysis(undefined);
+      setPerformanceComparison(undefined);
     }
   };
 
@@ -95,6 +104,7 @@ export default function Home() {
     setSourceCode("");
     setTranslatedCode("");
     setComplexityAnalysis(undefined);
+    setPerformanceComparison(undefined);
   };
 
   return (
@@ -195,6 +205,16 @@ export default function Home() {
             complexityAnalysis={complexityAnalysis}
             isVisible={!!translatedCode || !!complexityAnalysis}
           />
+
+          {translatedCode && (
+            <PerformanceComparison
+              sourceCode={sourceCode}
+              sourceLanguage={sourceLanguage}
+              translatedCode={translatedCode}
+              targetLanguage={targetLanguage}
+              performanceComparison={performanceComparison}
+            />
+          )}
           
           <FeatureCards />
           <RecentTranslations translations={recentTranslations as any || []} />

@@ -17,6 +17,12 @@ export interface TranslationResponse {
     spaceComplexity: string;
     description: string;
   };
+  performanceComparison?: {
+    originalComplexity: string;
+    translatedComplexity: string;
+    theoreticalWinner: 'original' | 'translated' | 'equal';
+    comparisonReason: string;
+  };
 }
 
 export async function translateCode(request: TranslateRequest): Promise<TranslationResponse> {

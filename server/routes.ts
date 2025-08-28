@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { translateRequestSchema } from "@shared/schema";
 import { translateCode } from "./services/openai";
 import { systemMonitor } from "./services/system-monitor";
+import { codeExecutor } from "./services/code-executor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Translate code endpoint
@@ -36,7 +37,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         translation,
         explanation: translationResult.explanation,
-        complexityAnalysis: translationResult.complexityAnalysis
+        complexityAnalysis: translationResult.complexityAnalysis,
+        performanceComparison: translationResult.performanceComparison
       });
     } catch (error) {
       console.error("Translation error:", error);
@@ -80,6 +82,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching system metrics:", error);
       res.status(500).json({ message: "Failed to fetch system metrics" });
+    }
+  });
+
+  // Performance test endpoint
+  app.post("/api/performance/test", async (req, res) => {
+    try {
+      const { originalCode, originalLanguage, translatedCode, translatedLanguage } = req.body;
+      
+      if (!originalCode || !originalLanguage || !translatedCode || !translatedLanguage) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+
+      const performanceResult = await codeExecutor.performanceTest(
+        originalCode,
+        originalLanguage,
+        translatedCode,
+        translatedLanguage
+      );
+
+      res.json(performanceResult);
+    } catch (error) {
+      console.error("Performance test error:", error);
+      res.status(500).json({ message: "Performance test failed" });
     }
   });
 
