@@ -9,8 +9,8 @@ import CodeEditor from "@/components/code-editor";
 import FeatureCards from "@/components/feature-cards";
 import RecentTranslations from "@/components/recent-translations";
 import PerformanceMetrics from "@/components/performance-metrics";
-import CPUUsageChart from "@/components/cpu-usage-chart";
 import ComplexityVisualization from "@/components/complexity-visualization";
+import CPUComparison from "@/components/cpu-comparison";
 import PerformanceComparison from "@/components/performance-comparison";
 import AppFooter from "@/components/app-footer";
 import { Button } from "@/components/ui/button";
@@ -111,16 +111,9 @@ export default function Home() {
     <div className="min-h-screen bg-dark-950 text-dark-100">
       <AppHeader />
       
-      <div className="flex">
-        {/* Left Sidebar - CPU Usage Chart */}
-        <div className="hidden lg:block w-64 p-4">
-          <div className="sticky top-20">
-            <CPUUsageChart />
-          </div>
-        </div>
-        
+      <div className="flex justify-center">
         {/* Main Content */}
-        <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <LanguageSelector
           sourceLanguage={sourceLanguage}
           targetLanguage={targetLanguage}
@@ -150,15 +143,26 @@ export default function Home() {
           />
           </div>
 
-          {/* Complexity Visualization - Below Code Editors */}
-          {(performanceComparison || complexityAnalysis) && (
-            <div className="mb-8">
+          {/* Analysis Section - Below Code Editors */}
+          {(performanceComparison || complexityAnalysis || translatedCode) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Complexity Analysis */}
               <ComplexityVisualization 
                 complexityAnalysis={complexityAnalysis}
                 performanceComparison={performanceComparison}
                 sourceLanguage={sourceLanguage}
                 targetLanguage={targetLanguage}
               />
+              
+              {/* CPU Performance Analysis */}
+              {translatedCode && (
+                <CPUComparison
+                  sourceCode={sourceCode}
+                  sourceLanguage={sourceLanguage}
+                  translatedCode={translatedCode}
+                  targetLanguage={targetLanguage}
+                />
+              )}
             </div>
           )}
 
