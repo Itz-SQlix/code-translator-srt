@@ -150,6 +150,18 @@ export default function Home() {
           />
           </div>
 
+          {/* Complexity Visualization - Below Code Editors */}
+          {(performanceComparison || complexityAnalysis) && (
+            <div className="mb-8">
+              <ComplexityVisualization 
+                complexityAnalysis={complexityAnalysis}
+                performanceComparison={performanceComparison}
+                sourceLanguage={sourceLanguage}
+                targetLanguage={targetLanguage}
+              />
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
           <Button
             onClick={handleTranslate}
@@ -220,17 +232,6 @@ export default function Home() {
           <RecentTranslations translations={recentTranslations as any || []} />
         </main>
         
-        {/* Right Sidebar - Complexity Visualization */}
-        <div className="hidden lg:block w-64 p-4">
-          <div className="sticky top-20">
-            <ComplexityVisualization 
-              complexityAnalysis={complexityAnalysis}
-              performanceComparison={performanceComparison}
-              sourceLanguage={sourceLanguage}
-              targetLanguage={targetLanguage}
-            />
-          </div>
-        </div>
       </div>
 
       <AppFooter />
