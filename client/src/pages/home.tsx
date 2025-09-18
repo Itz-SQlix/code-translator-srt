@@ -223,7 +223,12 @@ export default function Home() {
         {/* Right Sidebar - Complexity Visualization */}
         <div className="hidden lg:block w-64 p-4">
           <div className="sticky top-20">
-            <ComplexityVisualization complexityAnalysis={complexityAnalysis} />
+            <ComplexityVisualization 
+              complexityAnalysis={complexityAnalysis}
+              performanceComparison={performanceComparison}
+              sourceLanguage={sourceLanguage}
+              targetLanguage={targetLanguage}
+            />
           </div>
         </div>
       </div>
