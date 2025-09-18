@@ -39,7 +39,7 @@ export async function translateCode(
   const sourceLang = languageMap[sourceLanguage] || sourceLanguage;
   const targetLang = languageMap[targetLanguage] || targetLanguage;
 
-  const prompt = `You are an expert programmer skilled in multiple programming languages. 
+  const prompt = `You are an expert programmer and algorithm analyst skilled in multiple programming languages. 
 
 Translate the following ${sourceLang} code to ${targetLang}. 
 Maintain the same functionality, logic, and structure while adapting to ${targetLang} best practices and idioms.
@@ -50,18 +50,25 @@ Source Code (${sourceLang}):
 ${sourceCode}
 \`\`\`
 
+IMPORTANT: When analyzing complexity, consider the algorithm's behavior with varying input sizes. 
+- For loops that iterate a FIXED number of times (like exactly 1000 or 1 million iterations), this is O(1) - constant time.
+- For loops that depend on input size n, this is O(n), O(n²), etc.
+- Be precise about whether operations scale with input or are fixed.
+- If the original and translated algorithms are fundamentally different (e.g., bubble sort vs quicksort), they should have different complexities.
+- If they implement the same algorithm with same approach, they should have equal complexity.
+
 Please respond with a JSON object containing:
 - "translatedCode": the translated code as a string
 - "explanation": a brief explanation of any significant changes or adaptations made during translation
 - "complexityAnalysis": an object with:
-  - "timeComplexity": the Big O time complexity of the TRANSLATED code (e.g., "O(n)", "O(log n)", "O(n²)")
+  - "timeComplexity": the Big O time complexity of the TRANSLATED code (e.g., "O(1)", "O(n)", "O(log n)", "O(n²)")
   - "spaceComplexity": the Big O space complexity of the TRANSLATED code (e.g., "O(1)", "O(n)")
   - "description": a brief explanation of the translated algorithm's complexity and performance characteristics
 - "performanceComparison": an object with:
-  - "originalComplexity": the Big O time complexity of the ORIGINAL source code
+  - "originalComplexity": the Big O time complexity of the ORIGINAL source code  
   - "translatedComplexity": the Big O time complexity of the TRANSLATED code
   - "theoreticalWinner": either "original", "translated", or "equal" based on which has better theoretical performance
-  - "comparisonReason": explanation of why one is theoretically better or if they're equal
+  - "comparisonReason": detailed explanation of the complexity comparison and why one is better/worse/equal
 
 Ensure the translated code is complete, functional, and follows ${targetLang} best practices.`;
 

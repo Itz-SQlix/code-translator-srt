@@ -145,11 +145,12 @@ class CodeExecutor {
       case 'javascript':
         return { cmd: 'node', args: [filePath] };
       case 'java':
-        const className = path.basename(filePath, '.java');
-        return { cmd: 'javac', args: [filePath, '&&', 'java', className] };
+        // For Java, we need to compile first, then execute
+        return { cmd: 'sh', args: ['-c', `cd "${path.dirname(filePath)}" && javac "${path.basename(filePath)}" && java "${path.basename(filePath, '.java')}"`] };
       case 'cpp':
+        // For C++, we need to compile first, then execute
         const execName = path.join(path.dirname(filePath), 'temp_exec');
-        return { cmd: 'g++', args: [filePath, '-o', execName, '&&', execName] };
+        return { cmd: 'sh', args: ['-c', `g++ "${filePath}" -o "${execName}" && "${execName}"`] };
       default:
         throw new Error(`Unsupported language: ${language}`);
     }
