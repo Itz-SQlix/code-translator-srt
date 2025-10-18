@@ -42,7 +42,7 @@ export default function AppFooter() {
         </div>
         
         <div className="border-t border-dark-700 mt-8 pt-8 flex flex-col sm:flex-row items-center justify-between">
-          <p className="text-dark-400 text-sm">© 2024 CodeTranslate. All rights reserved.</p>
+          <p className="text-dark-400 text-sm">© 2024 CodeTranslate. All rights reserved. <span className='ml-4 font-semibold text-accent-blue'>Developer: srirudran</span></p>
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
             <Button
               variant="ghost"

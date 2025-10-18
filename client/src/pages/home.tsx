@@ -219,7 +219,6 @@ export default function Home() {
 
           <PerformanceMetrics 
             complexityAnalysis={complexityAnalysis}
-            isVisible={!!translatedCode || !!complexityAnalysis}
           />
 
           {translatedCode && (

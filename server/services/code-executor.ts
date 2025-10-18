@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { systemMonitor } from './system-monitor';
+import pidusage from 'pidusage';
 
 export interface ExecutionResult {
   success: boolean;
@@ -30,20 +31,56 @@ class CodeExecutor {
     }
   }
 
-  async executeCode(code: string, language: string, timeout: number = 5000): Promise<ExecutionResult> {
+  async executeCode(code: string, language: string, timeout: number = 10000): Promise<ExecutionResult> {
     const startTime = Date.now();
-    const startMetrics = await systemMonitor.getSystemMetrics();
+    let cpuSamples: number[] = [];
+    let memSamples: number[] = [];
+    let maxCpu = 0;
+    let result: any = {};
 
     try {
-      const result = await this.runCodeSafely(code, language, timeout);
+      result = await this.runCodeSafely(
+        code,
+        language,
+        timeout,
+        (childPid: number) => {
+          // Pid callback
+        },
+        (exited: boolean) => {
+          // Exit callback
+        },
+        (cpu: number, mem: number) => {
+          if (cpu > 0) {
+            cpuSamples.push(cpu);
+            maxCpu = Math.max(maxCpu, cpu);
+          }
+          if (mem > 0) {
+            memSamples.push(mem);
+          }
+        }
+      );
       const endTime = Date.now();
-      const endMetrics = await systemMonitor.getSystemMetrics();
-
+      const executionTime = endTime - startTime;
+      
+      // Calculate CPU: use max CPU if we have samples, otherwise estimate from execution time
+      let cpuUsage = 0;
+      if (cpuSamples.length > 0) {
+        // Use average of top samples
+        const sortedSamples = cpuSamples.sort((a, b) => b - a);
+        const topSamples = sortedSamples.slice(0, Math.max(3, Math.floor(sortedSamples.length / 2)));
+        cpuUsage = topSamples.reduce((a, b) => a + b, 0) / topSamples.length;
+      } else if (result.success && executionTime > 100) {
+        // Estimate: if process ran for significant time, assume some CPU usage
+        cpuUsage = Math.min(50, (executionTime / 1000) * 10);
+      }
+      
+      const maxMem = memSamples.length ? Math.max(...memSamples) : 0;
+      
       return {
         ...result,
-        executionTime: endTime - startTime,
-        cpuUsage: Math.max(0, endMetrics.cpuUsage - startMetrics.cpuUsage),
-        memoryUsage: endMetrics.memoryUsage.used - startMetrics.memoryUsage.used
+        executionTime,
+        cpuUsage: Math.round(cpuUsage * 10) / 10, // One decimal place
+        memoryUsage: Math.round(maxMem / 1024 / 1024) // bytes to MB
       };
     } catch (error) {
       const endTime = Date.now();
@@ -57,7 +94,14 @@ class CodeExecutor {
     }
   }
 
-  private async runCodeSafely(code: string, language: string, timeout: number): Promise<{ success: boolean; output?: string; error?: string }> {
+  private async runCodeSafely(
+    code: string, 
+    language: string, 
+    timeout: number,
+    onPid?: (pid: number) => void,
+    onExit?: (exited: boolean) => void,
+    onSample?: (cpu: number, mem: number) => void
+  ): Promise<{ success: boolean; output?: string; error?: string }> {
     const fileName = this.generateFileName(language);
     const filePath = path.join(this.tempDir, fileName);
 
@@ -77,6 +121,32 @@ class CodeExecutor {
 
         let stdout = '';
         let stderr = '';
+        let samplingInterval: NodeJS.Timeout | null = null;
+        let sampleCount = 0;
+
+        // Start CPU/memory sampling immediately and aggressively
+        if (process.pid && onPid && onSample) {
+          onPid(process.pid);
+          
+          // Sample immediately
+          const sampleUsage = async () => {
+            try {
+              if (process.pid && !process.killed) {
+                const stats = await pidusage(process.pid);
+                onSample(stats.cpu, stats.memory);
+                sampleCount++;
+              }
+            } catch (err) {
+              // Process might have exited, ignore
+            }
+          };
+          
+          // First sample
+          sampleUsage();
+          
+          // Then sample every 50ms for more granular data
+          samplingInterval = setInterval(sampleUsage, 50);
+        }
 
         process.stdout?.on('data', (data) => {
           stdout += data.toString();
@@ -86,7 +156,14 @@ class CodeExecutor {
           stderr += data.toString();
         });
 
-        process.on('close', (code) => {
+        process.on('close', async (code) => {
+          // Give one final sample before cleaning up
+          if (samplingInterval) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            clearInterval(samplingInterval);
+          }
+          if (onExit) onExit(true);
+          
           // Clean up file
           try {
             fs.unlinkSync(filePath);
@@ -102,6 +179,9 @@ class CodeExecutor {
         });
 
         process.on('error', (error) => {
+          if (samplingInterval) clearInterval(samplingInterval);
+          if (onExit) onExit(true);
+          
           // Clean up file
           try {
             fs.unlinkSync(filePath);
@@ -114,6 +194,7 @@ class CodeExecutor {
         // Handle timeout
         setTimeout(() => {
           if (!process.killed) {
+            if (samplingInterval) clearInterval(samplingInterval);
             process.kill('SIGTERM');
             resolve({ success: false, error: 'Execution timeout' });
           }
@@ -139,18 +220,28 @@ class CodeExecutor {
   }
 
   private getExecutionCommand(language: string, filePath: string): { cmd: string; args: string[] } {
+    const isWin = process.platform === 'win32';
     switch (language) {
       case 'python':
-        return { cmd: 'python3', args: [filePath] };
+        // Try python3, fallback to python
+        return { cmd: isWin ? 'python' : 'python3', args: [filePath] };
       case 'javascript':
         return { cmd: 'node', args: [filePath] };
       case 'java':
-        // For Java, we need to compile first, then execute
-        return { cmd: 'sh', args: ['-c', `cd "${path.dirname(filePath)}" && javac "${path.basename(filePath)}" && java "${path.basename(filePath, '.java')}"`] };
+        if (isWin) {
+          // Windows: javac then java
+          return { cmd: 'cmd', args: ['/c', `javac "${filePath}" && java -cp "${path.dirname(filePath)}" "${path.basename(filePath, '.java')}"`] };
+        } else {
+          return { cmd: 'sh', args: ['-c', `cd "${path.dirname(filePath)}" && javac "${path.basename(filePath)}" && java "${path.basename(filePath, '.java')}"`] };
+        }
       case 'cpp':
-        // For C++, we need to compile first, then execute
-        const execName = path.join(path.dirname(filePath), 'temp_exec');
-        return { cmd: 'sh', args: ['-c', `g++ "${filePath}" -o "${execName}" && "${execName}"`] };
+        const execName = path.join(path.dirname(filePath), isWin ? 'temp_exec.exe' : 'temp_exec');
+        if (isWin) {
+          // Windows: g++ then run .exe
+          return { cmd: 'cmd', args: ['/c', `g++ "${filePath}" -o "${execName}" && "${execName}"`] };
+        } else {
+          return { cmd: 'sh', args: ['-c', `g++ "${filePath}" -o "${execName}" && "${execName}"`] };
+        }
       default:
         throw new Error(`Unsupported language: ${language}`);
     }

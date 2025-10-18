@@ -32,8 +32,10 @@ export async function setupVite(app: Express, server: Server) {
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
+        // Log the error but do NOT kill the dev server.
+        // Exiting here causes the Express server to drop connections and the
+        // Simple Browser to show cancelled/unresponsive loads.
         viteLogger.error(msg, options);
-        process.exit(1);
       },
     },
     server: serverOptions,
